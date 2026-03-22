@@ -1,0 +1,6 @@
+RPi.GPIO
+Adafruit_DHT
+paho-mqtt
+flask
+flask-cors
+pigpio

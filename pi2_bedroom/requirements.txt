@@ -1,0 +1,4 @@
+RPi.GPIO
+Adafruit_DHT
+paho-mqtt
+pigpio
