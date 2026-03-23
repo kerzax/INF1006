@@ -1,5 +1,5 @@
 # ── Network ───────────────────────────────────────────────────────────────────
-MQTT_BROKER_IP = "192.168.1.100"   # Change to Pi 1's actual IP address
+MQTT_BROKER_IP = "192.168.137.9"   # Change to Pi 1's actual IP address
 MQTT_PORT      = 1883
 FLASK_PORT     = 5000
 
