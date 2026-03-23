@@ -242,59 +242,62 @@ def automation_loop(client: mqtt.Client):
                 )
 
 # ── Sensor + publish loop ─────────────────────────────────────────────────────
-
 def sensor_loop(client: mqtt.Client):
-    dht_sensor = Adafruit_DHT.DHT22
-    last_dht   = 0
+    dht_device = adafruit_dht.DHT22(board.D4)
+    last_dht = 0
 
     while True:
         distance = read_ultrasonic()
-        pir      = GPIO.input(PIR_PIN)
+        pir = GPIO.input(PIR_PIN)
 
         with state_lock:
             present = pir or (distance is not None and distance < ULTRASONIC_PRESENCE_CM)
             if present:
                 STATE["last_motion"] = time.time()
-                STATE["occupied"]    = True
+                STATE["occupied"] = True
             else:
                 with config_lock:
                     pir_timeout = RUNTIME_CONFIG["pir_timeout_sec"]
                 if time.time() - STATE["last_motion"] > pir_timeout:
                     STATE["occupied"] = False
-            occupied  = STATE["occupied"]
+            occupied = STATE["occupied"]
             away_mode = STATE["away_mode"]
 
         set_led(occupied and not away_mode)
 
-        # Publish ultrasonic
         if distance is not None:
             client.publish(
                 TOPICS["bedroom"]["ultrasonic"],
                 json.dumps({"distance_cm": distance}),
             )
 
-        # Publish PIR
         client.publish(
             TOPICS["bedroom"]["pir"],
             json.dumps({"motion": bool(pir)}),
         )
 
-        # DHT22 (less frequent)
         if time.time() - last_dht >= DHT_READ_INTERVAL:
-            humidity, temp = Adafruit_DHT.read_retry(dht_sensor, DHT_PIN)
-            if temp is not None and humidity is not None:
-                with state_lock:
-                    STATE["temp"]     = round(temp, 1)
-                    STATE["humidity"] = round(humidity, 1)
-                client.publish(
-                    TOPICS["bedroom"]["dht"],
-                    json.dumps({"temp": round(temp, 1), "humidity": round(humidity, 1)}),
-                )
-                print(f"[DHT22] {temp:.1f}°C  {humidity:.1f}%")
+            try:
+                temp = dht_device.temperature
+                humidity = dht_device.humidity
+
+                if temp is not None and humidity is not None:
+                    with state_lock:
+                        STATE["temp"] = round(temp, 1)
+                        STATE["humidity"] = round(humidity, 1)
+
+                    client.publish(
+                        TOPICS["bedroom"]["dht"],
+                        json.dumps({"temp": round(temp, 1), "humidity": round(humidity, 1)}),
+                    )
+                    print(f"[DHT22] {temp:.1f}°C  {humidity:.1f}%")
+
+            except RuntimeError as e:
+                print(f"[DHT22] Read error: {e}")
+
             last_dht = time.time()
 
         time.sleep(SENSOR_PUBLISH_INTERVAL)
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
