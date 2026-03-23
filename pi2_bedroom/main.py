@@ -12,9 +12,10 @@ import os
 import sys
 import threading
 import time
+import board
 from datetime import datetime
 
-import Adafruit_DHT
+import adafruit_dht
 import paho.mqtt.client as mqtt
 import RPi.GPIO as GPIO
 
