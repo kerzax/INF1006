@@ -11,9 +11,10 @@ import os
 import sys
 import threading
 import time
+import board
 from datetime import datetime
 
-import Adafruit_DHT
+import adafruit_dht
 import paho.mqtt.client as mqtt
 import RPi.GPIO as GPIO
 from flask import Flask, jsonify, request
@@ -172,19 +173,25 @@ def pir_loop():
         time.sleep(0.5)
 
 # ── DHT22 loop ────────────────────────────────────────────────────────────────
-
 def dht_loop():
-    """Read DHT22 every DHT_READ_INTERVAL seconds."""
-    sensor = Adafruit_DHT.DHT22
-    while True:
-        humidity, temp = Adafruit_DHT.read_retry(sensor, DHT_PIN)
-        if temp is not None and humidity is not None:
-            with state_lock:
-                STATE["living_room"]["temp"]     = round(temp, 1)
-                STATE["living_room"]["humidity"] = round(humidity, 1)
-            print(f"[DHT22] {temp:.1f}°C  {humidity:.1f}%")
-        time.sleep(DHT_READ_INTERVAL)
+    dht_device = adafruit_dht.DHT22(board.D4)
 
+    while True:
+        try:
+            temp = dht_device.temperature
+            humidity = dht_device.humidity
+
+            if temp is not None and humidity is not None:
+                with state_lock:
+                    STATE["living_room"]["temp"] = round(temp, 1)
+                    STATE["living_room"]["humidity"] = round(humidity, 1)
+
+                print(f"[DHT22] {temp:.1f}°C  {humidity:.1f}%")
+
+        except RuntimeError as e:
+            print("[DHT] Retry:", e)
+
+        time.sleep(DHT_READ_INTERVAL)
 # ── Automation loop ───────────────────────────────────────────────────────────
 
 def automation_loop():
